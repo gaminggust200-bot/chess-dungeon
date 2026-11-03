@@ -5,7 +5,7 @@
 <title>Chess Dungeon</title>
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
---bg:#0a0a0a;--ink:#cdcdcd;--light:#7a7a7a;--dark:#555555;--sel:#cabc09;--hint:rgba(29,29,181,.8);--last:rgba(202,188,9,.3);--pw:#cdcdcd;--pb:#cf3a35;--btn:#1d1db5;--btnt:#f2f2f2;--card:#161616;--gold:#cabc09}
+--bg:#0a0a0a;--ink:#cdcdcd;--light:#858585;--dark:#606060;--sel:#cabc09;--hint:rgba(29,29,181,.8);--last:rgba(202,188,9,.3);--pw:#cdcdcd;--pb:#cf3a35;--btn:#1d1db5;--btnt:#f2f2f2;--card:#161616;--gold:#cabc09}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,serif;display:flex;flex-direction:column;align-items:center;gap:12px;padding:18px 12px}
 h1{font-size:1.8rem;font-weight:400;margin:0}h2{font-weight:400;margin:0}
@@ -32,7 +32,7 @@ button:focus-visible{outline:3px solid var(--sel);outline-offset:2px}
 .c:focus-visible{outline:3px solid var(--sel);outline-offset:-3px}
 .w{color:var(--pw);text-shadow:0 0 2px #000,0 0 2px #000,0 1px 1px #000}.b{color:var(--pb);text-shadow:0 0 2px #000,0 1px 1px #000}
 .c span{position:relative;z-index:1}
-.king,.piece{height:95%;width:auto;image-rendering:pixelated;position:relative;z-index:1;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.65))}
+.king,.piece{height:95%;width:auto;image-rendering:pixelated;position:relative;z-index:1;pointer-events:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.85))}
 .piece.ui{height:22px;width:auto;vertical-align:middle;filter:none}
 </style></head><body>
 <h1>Chess Dungeon</h1>
