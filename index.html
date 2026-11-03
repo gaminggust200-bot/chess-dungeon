@@ -125,22 +125,29 @@ for(let i=0;i<S.mods.en;i++)en.push(rnd(pool()));
 for(let i=0;i<S.mods.rm&&en.length>1;i++)en.splice(Math.floor(Math.random()*en.length),1);
 S.mods={me:[],rm:0,en:0};place(mine,true);place(en,false);turn=true;sel=null;legal=[];last=[];over=false;resignNote=null;clearInterval(clockTimer);
 const ch=S.challenge&&S.challenge.on;
-ui(`<div id="st"></div>${ch?`<div id="clock" class="clock"><b></b><small></small></div>`:""}<div id="bd" role="grid" aria-label="Chess board"></div><p><small>Win by checkmate or by capturing every enemy piece except the king.</small></p>`);draw();if(ch){S.challenge.timeouts=S.challenge.timeouts||0;startClock()}}
+ui(`<div id="st"></div>${ch?`<div id="clock" class="clock"><b></b><small></small></div>`:""}<div id="bd" role="grid" aria-label="Chess board"></div><p><small>Win by checkmate or by capturing every enemy piece except the king.</small></p>`);draw();if(ch){S.challenge.timeouts=S.challenge.timeouts||0;S.challenge.pending=0;S.challenge.wait=0;startClock()}}
 function clockTick(left){const el=document.getElementById("clock");if(!el)return;const m=Math.floor(left/60),s=left%60;
 el.classList.toggle("low",left<=30);el.querySelector("b").textContent=(S.challenge.maxTimeouts-S.challenge.timeouts);el.querySelector("small").textContent=`${m}:${String(s).padStart(2,"0")}`}
 function startClock(){let left=S.challenge.mins*60;clockTick(left);clearInterval(clockTimer);
 clockTimer=setInterval(()=>{if(over){clearInterval(clockTimer);return}left--;if(left<=0)onTimeout();else clockTick(left)},1000)}
+const REINF_DELAY=2;
 function onTimeout(){S.challenge.timeouts++;clearInterval(clockTimer);
 if(S.challenge.timeouts>S.challenge.maxTimeouts){lost();return}
-const k=1+Math.floor(Math.random()*2);for(let i=0;i<k;i++){const empties=[];for(let s2=0;s2<64;s2++)if(B[s2]===".")empties.push(s2);if(empties.length)B[rnd(empties)]=rnd(pool())}
+S.challenge.pending=(S.challenge.pending||0)+1+Math.floor(Math.random()*2);S.challenge.wait=REINF_DELAY;
 draw();startClock()}
+function reinforce(){const c=S&&S.challenge;if(!c||!c.pending)return;
+for(let i=0;i<c.pending;i++){const e=[];for(let j=0;j<64;j++)if(B[j]===".")e.push(j);if(!e.length)break;B[rnd(e)]=rnd(pool())}
+c.pending=0;c.wait=0}
 function status(){const w=B.filter(p=>p!=="."&&isW(p)&&p!=="K").length,bl=B.filter(p=>p!=="."&&!isW(p)&&p!=="k").length;
 if(!bl)return end(true);if(!w)return end(false);
 const ms=legalMoves(B,turn),chk=inCheck(B,turn);
 if(!ms.length){if(!chk)return "stale";return end(!turn)}
-return(turn?"Your move":"The enemy is thinking…")+(chk?" — check":"")}
+const rn=S&&S.challenge&&S.challenge.pending?" — reinforcements in "+Math.max(1,S.challenge.wait||1)+(S.challenge.wait===1?" turn":" turns"):"";
+return(turn?"Your move":"The enemy is thinking…")+(chk?" — check":"")+rn}
 function end(win){if(over)return"";over=true;setTimeout(()=>win?won():lost(),700);return win?"Victory!":"Your king has fallen."}
-function play(m){B=app(B,m);last=m;turn=!turn;sel=null;legal=[];draw();
+function play(m){B=app(B,m);last=m;turn=!turn;sel=null;legal=[];
+if(turn&&S&&S.challenge&&S.challenge.pending){S.challenge.wait--;if(S.challenge.wait<=0)reinforce()}
+draw();
 if(!over&&!turn){const diff=S.diff||"hard";
 if(resignCheck(diff)){over=true;resignNote="The enemy resigns \u2014 the gap is hopeless.";draw();setTimeout(won,900);return}
 setTimeout(()=>{const a=aiMove(B,diff);if(a)play(a);else draw()},250)}}
