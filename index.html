@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a">
 <title>Chess Dungeon</title>
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
---bg:#e9eeee;--ink:#17302f;--light:#dfe8e4;--dark:#6f9490;--sel:#f2c14e;--hint:rgba(23,48,47,.35);--last:rgba(242,193,78,.45);--pw:#fbfbf6;--pb:#10201f;--btn:#17302f;--btnt:#f3f7f6;--card:#f6faf9}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1b1b;--ink:#e3eeeb;--light:#8fb0aa;--dark:#3e605d;--hint:rgba(10,20,20,.5);--btn:#e3eeeb;--btnt:#0f1b1b;--card:#173030}}
-:root[data-theme="dark"]{--bg:#0f1b1b;--ink:#e3eeeb;--light:#8fb0aa;--dark:#3e605d;--hint:rgba(10,20,20,.5);--btn:#e3eeeb;--btnt:#0f1b1b;--card:#173030}
+--bg:#0a0a0a;--ink:#cdcdcd;--light:#7a7a7a;--dark:#555555;--sel:#cabc09;--hint:rgba(29,29,181,.8);--last:rgba(202,188,9,.3);--pw:#cdcdcd;--pb:#cf3a35;--btn:#1d1db5;--btnt:#f2f2f2;--card:#161616;--gold:#cabc09}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,serif;display:flex;flex-direction:column;align-items:center;gap:12px;padding:18px 12px}
 h1{font-size:1.8rem;font-weight:400;margin:0}h2{font-weight:400;margin:0}
@@ -17,12 +16,13 @@ button.n,.opt{background:var(--btn);color:var(--btnt);border:0;border-radius:4px
 .opt{background:var(--card);color:var(--ink);border:2px solid var(--ink);flex:1 1 140px;display:flex;flex-direction:column;gap:4px;align-items:center}
 .opt b{font-size:1.05rem;font-weight:700}.opt small{opacity:.85}.opt .g{font-size:2rem;font-family:"Segoe UI Symbol","Apple Symbols",serif}
 button:disabled{opacity:.4;cursor:default}
-label{display:flex;gap:12px;align-items:center;font-size:1.1rem}input[type=range]{width:180px}
+label{display:flex;gap:12px;align-items:center;font-size:1.1rem}input[type=range]{width:180px;accent-color:var(--gold)}
+input[type=checkbox]{accent-color:var(--gold)}input[type=number],select{background:var(--card);color:var(--ink);border:1px solid var(--ink);border-radius:4px;padding:4px 6px;font:inherit}
 .clock{width:84px;height:84px;border-radius:50%;border:4px solid var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto;transition:border-color .3s,box-shadow .3s}
 .clock b{font-size:1.5rem;line-height:1}.clock small{font-size:.7rem}
 .clock.low{border-color:#7A1520;box-shadow:0 0 14px #7A1520}
 button:focus-visible{outline:3px solid var(--sel);outline-offset:2px}
-#bd{--s:min(92vw,520px);width:var(--s);height:var(--s);display:grid;grid-template:repeat(8,1fr)/repeat(8,1fr);border:3px solid var(--ink);border-radius:4px;overflow:hidden}
+#bd{--s:min(92vw,520px);width:var(--s);height:var(--s);display:grid;grid-template:repeat(8,1fr)/repeat(8,1fr);border:3px solid var(--gold);border-radius:4px;overflow:hidden}
 .c{border:0;padding:0;margin:0;position:relative;font-size:calc(var(--s)/8*.78);line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:"Segoe UI Symbol","Apple Symbols",serif}
 .c.l{background:var(--light)}.c.d{background:var(--dark)}
 .c.last::before{content:"";position:absolute;inset:0;background:var(--last)}
@@ -30,8 +30,9 @@ button:focus-visible{outline:3px solid var(--sel);outline-offset:2px}
 .c.hint::after{content:"";position:absolute;width:26%;height:26%;border-radius:50%;background:var(--hint)}
 .c.cap::after{width:84%;height:84%;background:none;border:4px solid var(--hint)}
 .c:focus-visible{outline:3px solid var(--sel);outline-offset:-3px}
-.w{color:var(--pw);text-shadow:0 0 2px #000,0 0 2px #000,0 1px 1px #000}.b{color:var(--pb)}
+.w{color:var(--pw);text-shadow:0 0 2px #000,0 0 2px #000,0 1px 1px #000}.b{color:var(--pb);text-shadow:0 0 2px #000,0 1px 1px #000}
 .c span{position:relative;z-index:1}
+.king{height:97%;width:auto;image-rendering:pixelated;position:relative;z-index:1;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.65))}
 </style></head><body>
 <h1>Chess Dungeon</h1>
 <div id="hud"></div>
@@ -39,7 +40,8 @@ button:focus-visible{outline:3px solid var(--sel);outline-offset:2px}
 <script>
 const V={p:100,n:320,b:330,r:500,q:900,k:20000};
 const GL={k:"♚",q:"♛",r:"♜",b:"♝",n:"♞",p:"♟︎"};
-const NM={p:"Pawn",n:"Knight",b:"Bishop",r:"Rook",q:"Queen"};
+const KW="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAgCAYAAAASYli2AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAADmSURBVEhL7ZRBDsIwDAR75RF9Me/hxguQ8iboOtnITZzERki9MNJSGq9H4cLm5F3yEygLS1nWS0VyL+F7hd/1WUUPm3RCHcDnibYYzZBaSimZ0Z0jbkwZglmuxDBlCGa5EsOUIZjlih9Zej1vnQxnnKPoQcr7/hgKMWMPCxa6UJdmQjzbvSOCvKDUZiZsQ48IrYIlYxbSv7DkcqH6e5OPrhAXZg+EoCtEhPp2RA48MkZLuQ+R5iuhdTsig7jQvh0JCWe3I1LwC+e3I1HhkqUwy9Y/l0h5Jr1UWEohITKkFL3C9pbb9gFl0gZHSZI+FwAAAABJRU5ErkJggg==",KB="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAgCAYAAAASYli2AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAADpSURBVEhL7ZRBDsIwDAR75RF9Rx7Je7jxAj4FXScbuanr2AipF0ZatY3Xo3BhCfJu+QmUpaUs6yWR3Fv4jUGD7/qso4e7GEIdwOeOsZjNKb1USjGjO1vCmDIEs1rJYcoQzGolhylDMKuVOLL0et4OMpxxjmIEKT/W9VSIGXtYsNCFvuQJ8Rz3tgjygdIYTziGHhFaBUvGTKR/YcvlQvX3Vl/GQlZID4TgUMgI9e2IHERkjJZyHyLNV0LrdkQGWSH3ILBICb3bESlEhexj0SMrnDIVYh75uUTKnvRSoZSSQlcqxahQSRvL8gEp/eCbE2RpjQAAAABJRU5ErkJggg==";
+const NM={p:"Pawn",n:"Knight",b:"Bishop",r:"Rook",q:"Queen",k:"King"};
 const isW=c=>c===c.toUpperCase();
 const N=[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
 const D8=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
@@ -152,13 +154,13 @@ if(!over&&!turn){const diff=S.diff||"hard";
 if(resignCheck(diff)){over=true;resignNote="The enemy resigns \u2014 the gap is hopeless.";draw();setTimeout(won,900);return}
 setTimeout(()=>{const a=aiMove(B,diff);if(a)play(a);else draw()},250)}}
 function draw(){const bd=document.getElementById("bd");if(!bd)return;
-if(over&&resignNote){bd.innerHTML="";for(let i=0;i<64;i++){const p=B[i];const c=document.createElement("div");c.className="c "+(((i>>3)+(i&7))%2?"d":"l");if(p!=="."){const s=document.createElement("span");s.textContent=GL[p.toLowerCase()];s.className=isW(p)?"w":"b";c.appendChild(s)}bd.appendChild(c)}const st=document.getElementById("st");if(st)st.textContent=resignNote;return}
+if(over&&resignNote){bd.innerHTML="";for(let i=0;i<64;i++){const p=B[i];const c=document.createElement("div");c.className="c "+(((i>>3)+(i&7))%2?"d":"l");if(p!=="."){if(p==="K"||p==="k"){const im=document.createElement("img");im.className="king";im.src=p==="K"?KW:KB;im.alt="";c.appendChild(im)}else{const s=document.createElement("span");s.textContent=GL[p.toLowerCase()];s.className=isW(p)?"w":"b";c.appendChild(s)}}bd.appendChild(c)}const st=document.getElementById("st");if(st)st.textContent=resignNote;return}
 bd.innerHTML="";
 for(let i=0;i<64;i++){const b=document.createElement("button");const p=B[i];
 b.className="c "+(((i>>3)+(i&7))%2?"d":"l")+(last.includes(i)?" last":"")+(sel===i?" sel":"");
 const lm=legal.find(m=>m[1]===i);if(lm)b.className+=p!=="."?" hint cap":" hint";
-b.setAttribute("aria-label","square "+"abcdefgh"[i&7]+(8-(i>>3))+(p!=="."?" "+p:""));
-if(p!=="."){const s=document.createElement("span");s.textContent=GL[p.toLowerCase()];s.className=isW(p)?"w":"b";b.appendChild(s)}
+b.setAttribute("aria-label","square "+"abcdefgh"[i&7]+(8-(i>>3))+(p!=="."?" "+(isW(p)?"White ":"Black ")+NM[p.toLowerCase()]:""));
+if(p!=="."){if(p==="K"||p==="k"){const im=document.createElement("img");im.className="king";im.src=p==="K"?KW:KB;im.alt="";b.appendChild(im)}else{const s=document.createElement("span");s.textContent=GL[p.toLowerCase()];s.className=isW(p)?"w":"b";b.appendChild(s)}}
 b.onclick=()=>click(i);bd.appendChild(b)}
 const s=status();if(s==="stale"){document.getElementById("st").textContent="Stalemate — the wave resets.";over=true;setTimeout(battle,1500)}else document.getElementById("st").textContent=s}
 function click(i){if(over||!turn)return;const m=legal.find(x=>x[1]===i);if(m){play(m);return}
