@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chess Dungeon</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#e9eeee;--ink:#17302f;--light:#dfe8e4;--dark:#6f9490;--sel:#f2c14e;--hint:rgba(23,48,47,.35);--last:rgba(242,193,78,.45);--pw:#fbfbf6;--pb:#10201f;--btn:#17302f;--btnt:#f3f7f6;--card:#f6faf9}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1b1b;--ink:#e3eeeb;--light:#8fb0aa;--dark:#3e605d;--hint:rgba(10,20,20,.5);--btn:#e3eeeb;--btnt:#0f1b1b;--card:#173030}}
+:root[data-theme="dark"]{--bg:#0f1b1b;--ink:#e3eeeb;--light:#8fb0aa;--dark:#3e605d;--hint:rgba(10,20,20,.5);--btn:#e3eeeb;--btnt:#0f1b1b;--card:#173030}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,serif;display:flex;flex-direction:column;align-items:center;gap:12px;padding:18px 12px}
+h1{font-size:1.8rem;font-weight:400;margin:0}h2{font-weight:400;margin:0}
+#hud{font-size:1rem;display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+#ui{width:min(92vw,520px);display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%}
+button.n,.opt{background:var(--btn);color:var(--btnt);border:0;border-radius:4px;padding:10px 16px;font:inherit;cursor:pointer}
+.opt{background:var(--card);color:var(--ink);border:2px solid var(--ink);flex:1 1 140px;display:flex;flex-direction:column;gap:4px;align-items:center}
+.opt b{font-size:1.05rem;font-weight:700}.opt small{opacity:.85}.opt .g{font-size:2rem;font-family:"Segoe UI Symbol","Apple Symbols",serif}
+button:disabled{opacity:.4;cursor:default}
+label{display:flex;gap:12px;align-items:center;font-size:1.1rem}input[type=range]{width:180px}
+.clock{width:84px;height:84px;border-radius:50%;border:4px solid var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto;transition:border-color .3s,box-shadow .3s}
+.clock b{font-size:1.5rem;line-height:1}.clock small{font-size:.7rem}
+.clock.low{border-color:#7A1520;box-shadow:0 0 14px #7A1520}
+button:focus-visible{outline:3px solid var(--sel);outline-offset:2px}
+#bd{--s:min(92vw,520px);width:var(--s);height:var(--s);display:grid;grid-template:repeat(8,1fr)/repeat(8,1fr);border:3px solid var(--ink);border-radius:4px;overflow:hidden}
+.c{border:0;padding:0;margin:0;position:relative;font-size:calc(var(--s)/8*.78);line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:"Segoe UI Symbol","Apple Symbols",serif}
+.c.l{background:var(--light)}.c.d{background:var(--dark)}
+.c.last::before{content:"";position:absolute;inset:0;background:var(--last)}
+.c.sel{box-shadow:inset 0 0 0 4px var(--sel)}
+.c.hint::after{content:"";position:absolute;width:26%;height:26%;border-radius:50%;background:var(--hint)}
+.c.cap::after{width:84%;height:84%;background:none;border:4px solid var(--hint)}
+.c:focus-visible{outline:3px solid var(--sel);outline-offset:-3px}
+.w{color:var(--pw);text-shadow:0 0 2px #000,0 0 2px #000,0 1px 1px #000}.b{color:var(--pb)}
+.c span{position:relative;z-index:1}
+</style></head><body>
+<h1>Chess Dungeon</h1>
+<div id="hud"></div>
+<div id="ui"></div>
+<script>
+const V={p:100,n:320,b:330,r:500,q:900,k:20000};
+const GL={k:"♚",q:"♛",r:"♜",b:"♝",n:"♞",p:"♟︎"};
+const NM={p:"Pawn",n:"Knight",b:"Bishop",r:"Rook",q:"Queen"};
+const isW=c=>c===c.toUpperCase();
+const N=[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+const D8=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+function gen(b,side,att){const m=[];
+for(let i=0;i<64;i++){const p=b[i];if(p==="."||isW(p)!==side)continue;const t=p.toLowerCase(),r=i>>3,f=i&7;
+const add=(nr,nf)=>{if(nr<0||nr>7||nf<0||nf>7)return false;const j=nr*8+nf,q=b[j];if(q==="."){m.push([i,j]);return true}if(isW(q)!==side)m.push([i,j]);return false};
+if(t==="p"){const d=side?-1:1,st=side?6:1;
+for(const df of[-1,1]){const nr=r+d,nf=f+df;if(nr<0||nr>7||nf<0||nf>7)continue;const j=nr*8+nf;if(att||(b[j]!=="."&&isW(b[j])!==side))m.push([i,j])}
+if(!att){const j=(r+d)*8+f;if(j>=0&&j<64&&b[j]==="."){m.push([i,j]);const k=(r+2*d)*8+f;if(r===st&&b[k]===".")m.push([i,k])}}}
+else if(t==="n"){for(const[a,c]of N)add(r+a,f+c)}
+else if(t==="k"){for(const[a,c]of D8)add(r+a,f+c)}
+else{const ds=t==="b"?[[-1,-1],[-1,1],[1,-1],[1,1]]:t==="r"?[[-1,0],[1,0],[0,-1],[0,1]]:D8;
+for(const[a,c]of ds){let nr=r+a,nf=f+c;while(add(nr,nf)){nr+=a;nf+=c}}}}
+return m}
+const inCheck=(b,s)=>{const k=b.indexOf(s?"K":"k");return gen(b,!s,true).some(m=>m[1]===k)};
+function app(b,m){const n=b.slice(),[f,t]=m,p=n[f];n[t]=p;n[f]=".";if(p==="P"&&t<8)n[t]="Q";if(p==="p"&&t>55)n[t]="q";return n}
+const legalMoves=(b,s)=>gen(b,s,false).filter(m=>!inCheck(app(b,m),s));
+function ev(b){let s=0;for(let i=0;i<64;i++){const p=b[i];if(p===".")continue;const t=p.toLowerCase(),r=i>>3,f=i&7;const v=V[t]+(t==="k"?0:(7-Math.abs(7-2*f)-Math.abs(7-2*r))*2);s+=isW(p)?-v:v}return s}
+function aiMove(B,diff){const ms=legalMoves(B,false);if(!ms.length)return null;
+const mistake={easy:.35,medium:0,hard:0,extreme:0}[diff]||0;if(Math.random()<mistake)return rnd(ms);
+const noise={easy:20,medium:10,hard:4,extreme:2}[diff]||6;let best=-1e9,pick=ms[0];
+for(const m of ms){const nb=app(B,m);let w=1e9;const rep=gen(nb,true,false);for(const r of rep){const s=ev(app(nb,r));if(s<w)w=s}if(!rep.length)w=ev(nb);w+=Math.random()*noise;if(w>best){best=w;pick=m}}return pick}
+function resignCheck(diff){if(diff==="extreme")return false;const gap=-ev(B);const th={easy:400,medium:650,hard:900}[diff]||900;return gap>=th}
+
+const BACK=[59,61,58,62,57,63,56],PAWN=[51,52,50,53,49,54,48,55];
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+const pool=()=>S.wave>=6?["p","p","n","b","r","q"]:["p","p","n","b","r"];
+let S,B,turn,sel,legal,last,over,resignNote=null,clockTimer=null;
+let slot=0,mem=[null,null,null];
+function load(){try{const r=JSON.parse(localStorage.getItem("cd_slots"));if(Array.isArray(r))return r}catch(e){}return mem}
+function store(a){mem=a;try{localStorage.setItem("cd_slots",JSON.stringify(a))}catch(e){}}
+function save(){const a=load().slice();while(a.length<3)a.push(null);a[slot]=S;store(a)}
+function clearSlot(i){const a=load().slice();a[i]=null;store(a)}
+function start(i){slot=i;S={wave:1,gold:0,roster:[],enemy:[],mods:{me:[],rm:0,en:0},diff:pendingDiff,challenge:JSON.parse(JSON.stringify(pendingChallenge))};draft()}
+function cont(i){slot=i;S=load()[i];if(S.phase==="map")showMap();else battle()}
+function askDel(i){ui(`<h2>Delete slot ${i+1}?</h2><p>This run can’t be recovered.</p><div class="row"><button class="n" onclick="delRun(${i})">Delete run</button><button class="n" onclick="home()">Cancel</button></div>`)}
+function delRun(i){clearSlot(i);home()}
+function askRep(i){ui(`<h2>Replace slot ${i+1}?</h2><p>The saved run in this slot will be deleted and a new run will start.</p><div class="row"><button class="n" onclick="start(${i})">Delete and start new</button><button class="n" onclick="home()">Cancel</button></div>`)}
+function home(){clearInterval(clockTimer);S=null;ui(`<h2>The dungeon awaits</h2><p>Draft a tiny army, climb the waves, and outlast the returning king.</p><div class="row"><button class="n" onclick="newRun()">New run</button><button class="n" onclick="slots()" ${load().some(x=>x)?"":"disabled"}>Continue run</button><button class="n" onclick="settings()">Settings</button></div>`)}
+function slots(){S=null;const a=load();
+const card=i=>{const s=a[i];return s?`<div class="opt"><b>Slot ${i+1}</b><small>Wave ${s.wave}, ${s.gold} gold</small><small>${s.roster.map(t=>GL[t]).join(" ")}</small><div class="row"><button class="n" onclick="cont(${i})">Continue</button><button class="n" onclick="askDel(${i})">Delete</button></div></div>`:`<div class="opt"><b>Slot ${i+1}</b><small>Empty</small><div class="row"><button class="n" disabled>Continue</button></div></div>`};
+ui(`<h2>Choose your run</h2><div class="row">${[0,1,2].map(card).join("")}</div><button class="n" onclick="home()">Back</button>`)}
+function pickSlot(){const a=load();const f=[0,1,2].find(i=>!a[i]);if(f!==undefined){start(f);return}
+ui(`<h2>All three slots are full</h2><p>Choose a run to delete and replace.</p><div class="row">${[0,1,2].map(i=>`<button class="opt" onclick="askRep(${i})"><b>Slot ${i+1}</b><small>Wave ${a[i].wave}, ${a[i].gold} gold</small></button>`).join("")}</div><button class="n" onclick="home()">Cancel</button>`)}
+function loadProg(){try{const p=JSON.parse(localStorage.getItem("cd_prog"));if(p)return p}catch(e){}return{easy:true}}
+function saveProg(p){try{localStorage.setItem("cd_prog",JSON.stringify(p))}catch(e){}}
+const DIFFS=[["easy","Easy"],["medium","Medium"],["hard","Hard"],["extreme","You asked for it."]];
+function prevOf(k){return{medium:"Easy",hard:"Medium",extreme:"Hard"}[k]}
+let pendingDiff="easy",pendingChallenge={on:false};
+function newRun(){const prog=loadProg();
+ui(`<h2>Choose your difficulty</h2><div class="row">${DIFFS.map(([k,label])=>prog[k]?`<button class="opt" onclick="pickDiff('${k}')"><b>${label}</b></button>`:`<div class="opt" style="opacity:.5"><b>\u{1F512} ${label}</b><small>Reach wave 5 on ${prevOf(k)} to unlock</small></div>`).join("")}</div><button class="n" onclick="home()">Cancel</button>`)}
+function pickDiff(k){if(k==="extreme"){ui(`<h2>Are you sure?</h2><p>\u201CYou asked for it.\u201D The dungeon will not be kind.</p><div class="row"><button class="n" onclick="pendingDiff='extreme';challengePage()">I asked for it</button><button class="n" onclick="newRun()">Never mind</button></div>`);return}
+pendingDiff=k;challengePage()}
+function challengePage(){ui(`<h2>Challenge mode</h2><p>Optional: race a ticking clock each wave. Run out of time too often and the run ends.</p><label>Enable challenge mode <input type="checkbox" id="ch"></label><div id="chopts" style="display:none;flex-direction:column;gap:10px;align-items:center"><label>Minutes per wave <select id="chmin"><option value="2">2</option><option value="5" selected>5</option><option value="10">10</option><option value="15">15</option></select></label><label>Timeouts allowed <input type="number" id="chlim" min="1" max="10" value="3" style="width:60px"></label></div><div class="row"><button class="n" onclick="confirmChallenge()">Continue</button></div>`);
+const cb=document.getElementById("ch"),op=document.getElementById("chopts");cb.onchange=()=>{op.style.display=cb.checked?"flex":"none"}}
+function confirmChallenge(){const on=document.getElementById("ch").checked;
+pendingChallenge=on?{on:true,mins:+document.getElementById("chmin").value,maxTimeouts:+document.getElementById("chlim").value,timeouts:0}:{on:false};pickSlot()}
+let au=null,bus,mg,mv=.5,mon=true,stp=0;
+try{const s=JSON.parse(localStorage.getItem("cd_set"));if(s){mv=s.v;mon=s.on}}catch(e){}
+function saveSet(){try{localStorage.setItem("cd_set",JSON.stringify({v:mv,on:mon}))}catch(e){}}
+function applyMusic(){if(mg)mg.gain.setTargetAtTime(mon?mv*.3:0,au.currentTime,.1)}
+function note(f,t,d,type,v){const o=au.createOscillator(),g=au.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.08);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(bus);o.start(t);o.stop(t+d+.1)}
+function tick(){if(!au||au.state!=="running")return;const t=au.currentTime+.05,r=[110,87.31,98,82.41][Math.floor(stp/8)%4];
+if(stp%8===0){note(r,t,10,"sine",.5);note(r*1.5,t,10,"sine",.22);note(r/2,t,10,"sine",.3)}
+if(Math.random()<.7)note(r*4*[1,1.2,1.5,1.8,2][Math.floor(Math.random()*5)],t+Math.random()*.4,3.5,"triangle",.12);stp++}
+function startMusic(){if(au){if(au.state==="suspended")au.resume();return}
+try{au=new (window.AudioContext||window.webkitAudioContext)();mg=au.createGain();mg.gain.value=mon?mv*.3:0;mg.connect(au.destination);bus=au.createGain();bus.connect(mg);
+const d=au.createDelay(2),fb=au.createGain(),lp=au.createBiquadFilter();d.delayTime.value=.75;fb.gain.value=.45;lp.frequency.value=1100;bus.connect(d);d.connect(lp);lp.connect(fb);fb.connect(d);lp.connect(mg);
+setInterval(tick,1500);tick()}catch(e){au=null}}
+document.addEventListener("pointerdown",startMusic);
+function settings(){ui(`<h2>Settings</h2><label>Music <input type="checkbox" id="mo" ${mon?"checked":""}></label><label>Volume <input type="range" id="mv" min="0" max="100" value="${Math.round(mv*100)}"></label><button class="n" onclick="home()">Back</button>`);
+document.getElementById("mo").onchange=e=>{mon=e.target.checked;saveSet();startMusic();applyMusic()};
+document.getElementById("mv").oninput=e=>{mv=e.target.value/100;saveSet();applyMusic()}}
+function hud(){document.getElementById("hud").innerHTML=S?`<span>Wave ${S.wave}</span><span>Gold ${S.gold}</span><span>Army: ${S.roster.map(t=>GL[t]).join(" ")||"—"}</span><button class="n" onclick="home()">Home</button>`:""}
+function ui(h){hud();document.getElementById("ui").innerHTML=h}
+function draft(){const pick=t=>{S.roster.push(t);if(S.roster.length<3)draft();else{S.enemy=[];const extra=S.diff==="extreme"?2:0;for(let i=0;i<4+extra;i++)S.enemy.push(rnd(pool()));battle()}};
+window.dp=pick;ui(`<h2>Draft your army</h2><p>Pick 3 pieces to join your king (${S.roster.length}/3). The queen unlocks after wave 5.</p><div class="row">${["p","n","b","r"].map(t=>`<button class="opt" onclick="dp('${t}')"><span class="g">${GL[t]}</span><b>${NM[t]}</b></button>`).join("")}</div>`)}
+function place(list,white){const b=B,bs=BACK.slice(),ps=PAWN.slice();
+for(const t of list){const s=t==="p"?ps.shift():bs.shift();if(s===undefined)continue;const i=white?s:s^56;b[i]=white?t.toUpperCase():t}}
+function battle(){S.phase="battle";save();B=Array(64).fill(".");B[60]="K";B[4]="k";
+const mine=S.roster.concat(S.mods.me);let en=S.enemy.slice();
+for(let i=0;i<S.mods.en;i++)en.push(rnd(pool()));
+for(let i=0;i<S.mods.rm&&en.length>1;i++)en.splice(Math.floor(Math.random()*en.length),1);
+S.mods={me:[],rm:0,en:0};place(mine,true);place(en,false);turn=true;sel=null;legal=[];last=[];over=false;resignNote=null;clearInterval(clockTimer);
+const ch=S.challenge&&S.challenge.on;
+ui(`<div id="st"></div>${ch?`<div id="clock" class="clock"><b></b><small></small></div>`:""}<div id="bd" role="grid" aria-label="Chess board"></div><p><small>Win by checkmate or by capturing every enemy piece except the king.</small></p>`);draw();if(ch){S.challenge.timeouts=S.challenge.timeouts||0;startClock()}}
+function clockTick(left){const el=document.getElementById("clock");if(!el)return;const m=Math.floor(left/60),s=left%60;
+el.classList.toggle("low",left<=30);el.querySelector("b").textContent=(S.challenge.maxTimeouts-S.challenge.timeouts);el.querySelector("small").textContent=`${m}:${String(s).padStart(2,"0")}`}
+function startClock(){let left=S.challenge.mins*60;clockTick(left);clearInterval(clockTimer);
+clockTimer=setInterval(()=>{if(over){clearInterval(clockTimer);return}left--;if(left<=0)onTimeout();else clockTick(left)},1000)}
+function onTimeout(){S.challenge.timeouts++;clearInterval(clockTimer);
+if(S.challenge.timeouts>S.challenge.maxTimeouts){lost();return}
+const k=1+Math.floor(Math.random()*2);for(let i=0;i<k;i++){const empties=[];for(let s2=0;s2<64;s2++)if(B[s2]===".")empties.push(s2);if(empties.length)B[rnd(empties)]=rnd(pool())}
+draw();startClock()}
+function status(){const w=B.filter(p=>p!=="."&&isW(p)&&p!=="K").length,bl=B.filter(p=>p!=="."&&!isW(p)&&p!=="k").length;
+if(!bl)return end(true);if(!w)return end(false);
+const ms=legalMoves(B,turn),chk=inCheck(B,turn);
+if(!ms.length){if(!chk)return "stale";return end(!turn)}
+return(turn?"Your move":"The enemy is thinking…")+(chk?" — check":"")}
+function end(win){if(over)return"";over=true;setTimeout(()=>win?won():lost(),700);return win?"Victory!":"Your king has fallen."}
+function play(m){B=app(B,m);last=m;turn=!turn;sel=null;legal=[];draw();
+if(!over&&!turn){const diff=S.diff||"hard";
+if(resignCheck(diff)){over=true;resignNote="The enemy resigns \u2014 the gap is hopeless.";draw();setTimeout(won,900);return}
+setTimeout(()=>{const a=aiMove(B,diff);if(a)play(a);else draw()},250)}}
+function draw(){const bd=document.getElementById("bd");if(!bd)return;
+if(over&&resignNote){bd.innerHTML="";for(let i=0;i<64;i++){const p=B[i];const c=document.createElement("div");c.className="c "+(((i>>3)+(i&7))%2?"d":"l");if(p!=="."){const s=document.createElement("span");s.textContent=GL[p.toLowerCase()];s.className=isW(p)?"w":"b";c.appendChild(s)}bd.appendChild(c)}const st=document.getElementById("st");if(st)st.textContent=resignNote;return}
+bd.innerHTML="";
+for(let i=0;i<64;i++){const b=document.createElement("button");const p=B[i];
+b.className="c "+(((i>>3)+(i&7))%2?"d":"l")+(last.includes(i)?" last":"")+(sel===i?" sel":"");
+const lm=legal.find(m=>m[1]===i);if(lm)b.className+=p!=="."?" hint cap":" hint";
+b.setAttribute("aria-label","square "+"abcdefgh"[i&7]+(8-(i>>3))+(p!=="."?" "+p:""));
+if(p!=="."){const s=document.createElement("span");s.textContent=GL[p.toLowerCase()];s.className=isW(p)?"w":"b";b.appendChild(s)}
+b.onclick=()=>click(i);bd.appendChild(b)}
+const s=status();if(s==="stale"){document.getElementById("st").textContent="Stalemate — the wave resets.";over=true;setTimeout(battle,1500)}else document.getElementById("st").textContent=s}
+function click(i){if(over||!turn)return;const m=legal.find(x=>x[1]===i);if(m){play(m);return}
+const p=B[i];if(p!=="."&&isW(p)){sel=i;legal=legalMoves(B,true).filter(x=>x[0]===i)}else{sel=null;legal=[]}draw()}
+function lost(){clearInterval(clockTimer);clearSlot(slot);ui(`<h2>Run over</h2><p>You reached wave ${S.wave} with ${S.gold} gold left.</p><button class="n" onclick="home()">Back to home</button>`)}
+function won(){clearInterval(clockTimer);const g=30+S.wave*5;S.gold+=g;S.wave++;
+if(S.wave>=5&&S.diff){const order=["easy","medium","hard","extreme"];const idx=order.indexOf(S.diff);if(idx>=0&&idx<3){const prog=loadProg();if(!prog[order[idx+1]]){prog[order[idx+1]]=true;saveProg(prog)}}}const k=1+Math.floor(Math.random()*2);for(let i=0;i<k;i++)if(S.enemy.length<14)S.enemy.push(rnd(pool()));
+const nodes=[["Shop","Spend gold on permanent recruits","shop"],["Armory","Pick a card — or skip for gold","armory"],["Ruins","Search for a random reward","ruins"]];
+const a=rnd(nodes);let b=rnd(nodes);while(b===a)b=rnd(nodes);S.map={n:[a,b],g:g,k:k};S.phase="map";save();showMap()}
+function showMap(){const{n:[a,b],g,k}=S.map;window.go=f=>window[f]();
+ui(`<h2>Wave cleared! +${g} gold</h2><p>The enemy king returns with ${k} more ${k>1?"pieces":"piece"}.${S.wave===6?" <b>Queens are now unlocked for both sides.</b>":""}<br>Choose your path:</p><div class="row">${[a,b].map(n=>`<button class="opt" onclick="go('${n[2]}')"><b>${n[0]}</b><small>${n[1]}</small></button>`).join("")}</div>`)}
+function shop(){const items=[["p",30],["n",60],["b",70],["r",110]];if(S.wave>=6)items.push(["q",220]);
+window.buy=t=>{const it=items.find(x=>x[0]===t);if(S.gold>=it[1]&&S.roster.length<12){S.gold-=it[1];S.roster.push(t)}shop()};
+ui(`<h2>Shop</h2><p>Recruits join every future battle.</p><div class="row">${items.map(([t,c])=>`<button class="opt" onclick="buy('${t}')" ${S.gold<c||S.roster.length>=12?"disabled":""}><span class="g">${GL[t]}</span><b>${NM[t]}</b><small>${c} gold</small></button>`).join("")}</div><button class="n" onclick="battle()">Leave for battle</button>`)}
+const CARDS=[{n:"Recruit",d:"+1 pawn this battle",me:"p"},{n:"Cavalry",d:"+1 knight this battle",me:"n"},{n:"Blessing",d:"+1 bishop this battle",me:"b"},{n:"Ambush",d:"Remove a random enemy piece",rm:1},{n:"Rook Guard",d:"+1 rook this battle",me:"r"}];
+function armory(){const hand=[...CARDS].sort(()=>Math.random()-.5).slice(0,3);
+window.card=i=>{const c=hand[i];if(c.me)S.mods.me.push(c.me);if(c.rm)S.mods.rm++;S.mods.en++;battle()};
+window.skip=()=>{S.gold+=25;battle()};
+ui(`<h2>Armory</h2><p>Take a card and the enemy draws a counter-card (+1 random piece). Skip and take 25 gold instead.</p><div class="row">${hand.map((c,i)=>`<button class="opt" onclick="card(${i})"><b>${c.n}</b><small>${c.d}</small></button>`).join("")}</div><button class="n" onclick="skip()">Skip for 25 gold</button>`)}
+function ruins(){const r=Math.random();let t;
+if(r<.4){const g=40+Math.floor(Math.random()*40);S.gold+=g;t=`You find a buried chest: +${g} gold.`}
+else if(r<.75&&S.roster.length<12){const p=rnd(["p","n","b"]);S.roster.push(p);t=`A ${NM[p]} pledges to join you permanently.`}
+else{S.gold+=80;S.mods.en++;t="A cursed hoard: +80 gold, but the next enemy gains a piece."}
+ui(`<h2>Ruins</h2><p>${t}</p><button class="n" onclick="battle()">Continue to battle</button>`)}
+home();
+</script></body></html>
