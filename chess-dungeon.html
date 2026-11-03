@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chess Dungeon</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#e9eeee;--ink:#17302f;--light:#dfe8e4;--dark:#6f9490;--sel:#f2c14e;--hint:rgba(23,48,47,.35);--last:rgba(242,193,78,.45);--pw:#fbfbf6;--pb:#10201f;--btn:#17302f;--btnt:#f3f7f6;--card:#f6faf9}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1b1b;--ink:#e3eeeb;--light:#8fb0aa;--dark:#3e605d;--hint:rgba(10,20,20,.5);--btn:#e3eeeb;--btnt:#0f1b1b;--card:#173030}}
+:root[data-theme="dark"]{--bg:#0f1b1b;--ink:#e3eeeb;--light:#8fb0aa;--dark:#3e605d;--hint:rgba(10,20,20,.5);--btn:#e3eeeb;--btnt:#0f1b1b;--card:#173030}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,serif;display:flex;flex-direction:column;align-items:center;gap:12px;padding:18px 12px}
+h1{font-size:1.8rem;font-weight:400;margin:0}h2{font-weight:400;margin:0}
+#hud{font-size:1rem;display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+#ui{width:min(92vw,520px);display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%}
+button.n,.opt{background:var(--btn);color:var(--btnt);border:0;border-radius:4px;padding:10px 16px;font:inherit;cursor:pointer}
+.opt{background:var(--card);color:var(--ink);border:2px solid var(--ink);flex:1 1 140px;display:flex;flex-direction:column;gap:4px;align-items:center}
+.opt b{font-size:1.05rem;font-weight:700}.opt small{opacity:.85}.opt .g{font-size:2rem;font-family:"Segoe UI Symbol","Apple Symbols",serif}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible{outline:3px solid var(--sel);outline-offset:2px}
+#bd{--s:min(92vw,520px);width:var(--s);height:var(--s);display:grid;grid-template:repeat(8,1fr)/repeat(8,1fr);border:3px solid var(--ink);border-radius:4px;overflow:hidden}
+.c{border:0;padding:0;margin:0;position:relative;font-size:calc(var(--s)/8*.78);line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:"Segoe UI Symbol","Apple Symbols",serif}
+.c.l{background:var(--light)}.c.d{background:var(--dark)}
+.c.last::before{content:"";position:absolute;inset:0;background:var(--last)}
+.c.sel{box-shadow:inset 0 0 0 4px var(--sel)}
+.c.hint::after{content:"";position:absolute;width:26%;height:26%;border-radius:50%;background:var(--hint)}
+.c.cap::after{width:84%;height:84%;background:none;border:4px solid var(--hint)}
+.c:focus-visible{outline:3px solid var(--sel);outline-offset:-3px}
+.w{color:var(--pw);text-shadow:0 0 2px #000,0 0 2px #000,0 1px 1px #000}.b{color:var(--pb)}
+.c span{position:relative;z-index:1}
+</style></head><body>
+<h1>Chess Dungeon</h1>
+<div id="hud"></div>
+<div id="ui"></div>
+<script>
+const V={p:100,n:320,b:330,r:500,q:900,k:20000};
+const GL={k:"♚",q:"♛",r:"♜",b:"♝",n:"♞",p:"♟︎"};
+const NM={p:"Pawn",n:"Knight",b:"Bishop",r:"Rook",q:"Queen"};
+const isW=c=>c===c.toUpperCase();
+const N=[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+const D8=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+function gen(b,side,att){const m=[];
+for(let i=0;i<64;i++){const p=b[i];if(p==="."||isW(p)!==side)continue;const t=p.toLowerCase(),r=i>>3,f=i&7;
+const add=(nr,nf)=>{if(nr<0||nr>7||nf<0||nf>7)return false;const j=nr*8+nf,q=b[j];if(q==="."){m.push([i,j]);return true}if(isW(q)!==side)m.push([i,j]);return false};
+if(t==="p"){const d=side?-1:1,st=side?6:1;
+for(const df of[-1,1]){const nr=r+d,nf=f+df;if(nr<0||nr>7||nf<0||nf>7)continue;const j=nr*8+nf;if(att||(b[j]!=="."&&isW(b[j])!==side))m.push([i,j])}
+if(!att){const j=(r+d)*8+f;if(j>=0&&j<64&&b[j]==="."){m.push([i,j]);const k=(r+2*d)*8+f;if(r===st&&b[k]===".")m.push([i,k])}}}
+else if(t==="n"){for(const[a,c]of N)add(r+a,f+c)}
+else if(t==="k"){for(const[a,c]of D8)add(r+a,f+c)}
+else{const ds=t==="b"?[[-1,-1],[-1,1],[1,-1],[1,1]]:t==="r"?[[-1,0],[1,0],[0,-1],[0,1]]:D8;
+for(const[a,c]of ds){let nr=r+a,nf=f+c;while(add(nr,nf)){nr+=a;nf+=c}}}}
+return m}
+const inCheck=(b,s)=>{const k=b.indexOf(s?"K":"k");return gen(b,!s,true).some(m=>m[1]===k)};
+function app(b,m){const n=b.slice(),[f,t]=m,p=n[f];n[t]=p;n[f]=".";if(p==="P"&&t<8)n[t]="Q";if(p==="p"&&t>55)n[t]="q";return n}
+const legalMoves=(b,s)=>gen(b,s,false).filter(m=>!inCheck(app(b,m),s));
+function ev(b){let s=0;for(let i=0;i<64;i++){const p=b[i];if(p===".")continue;const t=p.toLowerCase(),r=i>>3,f=i&7;const v=V[t]+(t==="k"?0:(7-Math.abs(7-2*f)-Math.abs(7-2*r))*2);s+=isW(p)?-v:v}return s}
+function ai(B){const ms=legalMoves(B,false);if(!ms.length)return null;let best=-1e9,pick=ms[0];
+for(const m of ms){const nb=app(B,m);let w=1e9;const rep=gen(nb,true,false);for(const r of rep){const s=ev(app(nb,r));if(s<w)w=s}if(!rep.length)w=ev(nb);w+=Math.random()*8;if(w>best){best=w;pick=m}}return pick}
+
+const BACK=[59,61,58,62,57,63,56],PAWN=[51,52,50,53,49,54,48,55];
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+const pool=()=>S.wave>=6?["p","p","n","b","r","q"]:["p","p","n","b","r"];
+let S,B,turn,sel,legal,last,over;
+function newRun(){S={wave:1,gold:0,roster:[],enemy:[],mods:{me:[],rm:0,en:0}};draft()}
+function hud(){document.getElementById("hud").innerHTML=S?`<span>Wave ${S.wave}</span><span>Gold ${S.gold}</span><span>Army: ${S.roster.map(t=>GL[t]).join(" ")||"—"}</span>`:""}
+function ui(h){hud();document.getElementById("ui").innerHTML=h}
+function draft(){const pick=t=>{S.roster.push(t);if(S.roster.length<3)draft();else{S.enemy=[];for(let i=0;i<4;i++)S.enemy.push(rnd(pool()));battle()}};
+window.dp=pick;ui(`<h2>Draft your army</h2><p>Pick 3 pieces to join your king (${S.roster.length}/3). The queen unlocks after wave 5.</p><div class="row">${["p","n","b","r"].map(t=>`<button class="opt" onclick="dp('${t}')"><span class="g">${GL[t]}</span><b>${NM[t]}</b></button>`).join("")}</div>`)}
+function place(list,white){const b=B,bs=BACK.slice(),ps=PAWN.slice();
+for(const t of list){const s=t==="p"?ps.shift():bs.shift();if(s===undefined)continue;const i=white?s:s^56;b[i]=white?t.toUpperCase():t}}
+function battle(){B=Array(64).fill(".");B[60]="K";B[4]="k";
+const mine=S.roster.concat(S.mods.me);let en=S.enemy.slice();
+for(let i=0;i<S.mods.en;i++)en.push(rnd(pool()));
+for(let i=0;i<S.mods.rm&&en.length>1;i++)en.splice(Math.floor(Math.random()*en.length),1);
+S.mods={me:[],rm:0,en:0};place(mine,true);place(en,false);turn=true;sel=null;legal=[];last=[];over=false;
+ui(`<div id="st"></div><div id="bd" role="grid" aria-label="Chess board"></div><p><small>Win by checkmate or by capturing every enemy piece except the king.</small></p>`);draw()}
+function status(){const w=B.filter(p=>p!=="."&&isW(p)&&p!=="K").length,bl=B.filter(p=>p!=="."&&!isW(p)&&p!=="k").length;
+if(!bl)return end(true);if(!w)return end(false);
+const ms=legalMoves(B,turn),chk=inCheck(B,turn);
+if(!ms.length){if(!chk)return "stale";return end(!turn)}
+return(turn?"Your move":"The enemy is thinking…")+(chk?" — check":"")}
+function end(win){if(over)return"";over=true;setTimeout(()=>win?won():lost(),700);return win?"Victory!":"Your king has fallen."}
+function play(m){B=app(B,m);last=m;turn=!turn;sel=null;legal=[];draw();
+if(!over&&!turn)setTimeout(()=>{const a=ai(B);if(a)play(a);else draw()},250)}
+function draw(){const bd=document.getElementById("bd");if(!bd)return;bd.innerHTML="";
+for(let i=0;i<64;i++){const b=document.createElement("button");const p=B[i];
+b.className="c "+(((i>>3)+(i&7))%2?"d":"l")+(last.includes(i)?" last":"")+(sel===i?" sel":"");
+const lm=legal.find(m=>m[1]===i);if(lm)b.className+=p!=="."?" hint cap":" hint";
+b.setAttribute("aria-label","square "+"abcdefgh"[i&7]+(8-(i>>3))+(p!=="."?" "+p:""));
+if(p!=="."){const s=document.createElement("span");s.textContent=GL[p.toLowerCase()];s.className=isW(p)?"w":"b";b.appendChild(s)}
+b.onclick=()=>click(i);bd.appendChild(b)}
+const s=status();if(s==="stale"){document.getElementById("st").textContent="Stalemate — the wave resets.";over=true;setTimeout(battle,1500)}else document.getElementById("st").textContent=s}
+function click(i){if(over||!turn)return;const m=legal.find(x=>x[1]===i);if(m){play(m);return}
+const p=B[i];if(p!=="."&&isW(p)){sel=i;legal=legalMoves(B,true).filter(x=>x[0]===i)}else{sel=null;legal=[]}draw()}
+function lost(){ui(`<h2>Run over</h2><p>You reached wave ${S.wave} with ${S.gold} gold left.</p><button class="n" onclick="newRun()">New run</button>`)}
+function won(){const g=30+S.wave*5;S.gold+=g;S.wave++;const k=1+Math.floor(Math.random()*2);for(let i=0;i<k;i++)if(S.enemy.length<14)S.enemy.push(rnd(pool()));
+const nodes=[["Shop","Spend gold on permanent recruits","shop"],["Armory","Pick a card — or skip for gold","armory"],["Ruins","Search for a random reward","ruins"]];
+const a=rnd(nodes);let b=rnd(nodes);while(b===a)b=rnd(nodes);window.go=f=>window[f]();
+ui(`<h2>Wave cleared! +${g} gold</h2><p>The enemy king returns with ${k} more ${k>1?"pieces":"piece"}.${S.wave===6?" <b>Queens are now unlocked for both sides.</b>":""}<br>Choose your path:</p><div class="row">${[a,b].map(n=>`<button class="opt" onclick="go('${n[2]}')"><b>${n[0]}</b><small>${n[1]}</small></button>`).join("")}</div>`)}
+function shop(){const items=[["p",30],["n",60],["b",70],["r",110]];if(S.wave>=6)items.push(["q",220]);
+window.buy=t=>{const it=items.find(x=>x[0]===t);if(S.gold>=it[1]&&S.roster.length<12){S.gold-=it[1];S.roster.push(t)}shop()};
+ui(`<h2>Shop</h2><p>Recruits join every future battle.</p><div class="row">${items.map(([t,c])=>`<button class="opt" onclick="buy('${t}')" ${S.gold<c||S.roster.length>=12?"disabled":""}><span class="g">${GL[t]}</span><b>${NM[t]}</b><small>${c} gold</small></button>`).join("")}</div><button class="n" onclick="battle()">Leave for battle</button>`)}
+const CARDS=[{n:"Recruit",d:"+1 pawn this battle",me:"p"},{n:"Cavalry",d:"+1 knight this battle",me:"n"},{n:"Blessing",d:"+1 bishop this battle",me:"b"},{n:"Ambush",d:"Remove a random enemy piece",rm:1},{n:"Rook Guard",d:"+1 rook this battle",me:"r"}];
+function armory(){const hand=[...CARDS].sort(()=>Math.random()-.5).slice(0,3);
+window.card=i=>{const c=hand[i];if(c.me)S.mods.me.push(c.me);if(c.rm)S.mods.rm++;S.mods.en++;battle()};
+window.skip=()=>{S.gold+=25;battle()};
+ui(`<h2>Armory</h2><p>Take a card and the enemy draws a counter-card (+1 random piece). Skip and take 25 gold instead.</p><div class="row">${hand.map((c,i)=>`<button class="opt" onclick="card(${i})"><b>${c.n}</b><small>${c.d}</small></button>`).join("")}</div><button class="n" onclick="skip()">Skip for 25 gold</button>`)}
+function ruins(){const r=Math.random();let t;
+if(r<.4){const g=40+Math.floor(Math.random()*40);S.gold+=g;t=`You find a buried chest: +${g} gold.`}
+else if(r<.75&&S.roster.length<12){const p=rnd(["p","n","b"]);S.roster.push(p);t=`A ${NM[p]} pledges to join you permanently.`}
+else{S.gold+=80;S.mods.en++;t="A cursed hoard: +80 gold, but the next enemy gains a piece."}
+ui(`<h2>Ruins</h2><p>${t}</p><button class="n" onclick="battle()">Continue to battle</button>`)}
+newRun();
+</script></body></html>
